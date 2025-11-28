@@ -17,9 +17,12 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.views.generic import TemplateView
+from tasks.views import serve_static_file
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/tasks/', include('tasks.urls')),
+    path('styles.css', serve_static_file, {'filename': 'styles.css'}),
+    path('script.js', serve_static_file, {'filename': 'script.js'}),
     path('', TemplateView.as_view(template_name='index.html'), name='home'),
 ]

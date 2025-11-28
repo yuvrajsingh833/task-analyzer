@@ -6,10 +6,12 @@ Endpoints:
 - GET /api/tasks/suggest/ - Get top 3 recommended tasks
 """
 
-from django.http import JsonResponse
+from django.http import JsonResponse, FileResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.conf import settings
 import json
+import os
 from .scoring import analyze_tasks, get_top_tasks, detect_circular_dependencies
 
 
@@ -127,3 +129,17 @@ def suggest_tasks_view(request):
         return JsonResponse({
             'error': f'Server error: {str(e)}'
         }, status=500)
+
+
+def serve_static_file(request, filename):
+    """Serve static files from frontend directory in development."""
+    frontend_dir = settings.STATICFILES_DIRS[0] if settings.STATICFILES_DIRS else None
+    if not frontend_dir:
+        from django.http import Http404
+        raise Http404("Static files directory not configured")
+    
+    file_path = os.path.join(frontend_dir, filename)
+    if os.path.exists(file_path):
+        return FileResponse(open(file_path, 'rb'), content_type='text/css' if filename.endswith('.css') else 'application/javascript')
+    from django.http import Http404
+    raise Http404(f"File not found: {filename}")
