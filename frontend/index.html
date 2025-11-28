@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Task Analyzer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎯 Smart Task Analyzer</h1>
+            <p class="subtitle">Intelligently prioritize your tasks based on multiple factors</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Input Section -->
+            <section class="input-section">
+                <h2>Input Tasks</h2>
+                
+                <!-- Strategy Selector -->
+                <div class="strategy-selector">
+                    <label for="strategy">Sorting Strategy:</label>
+                    <select id="strategy" name="strategy">
+                        <option value="smart_balance">Smart Balance (Recommended)</option>
+                        <option value="fastest_wins">Fastest Wins</option>
+                        <option value="high_impact">High Impact</option>
+                        <option value="deadline_driven">Deadline Driven</option>
+                    </select>
+                    <p class="strategy-description" id="strategy-description">
+                        Balances urgency, importance, effort, and dependencies intelligently
+                    </p>
+                </div>
+
+                <!-- Input Mode Toggle -->
+                <div class="input-mode-toggle">
+                    <button class="mode-btn active" id="form-mode-btn" onclick="switchInputMode('form')">Form Input</button>
+                    <button class="mode-btn" id="json-mode-btn" onclick="switchInputMode('json')">JSON Input</button>
+                </div>
+
+                <!-- Form Input Mode -->
+                <div id="form-input" class="input-mode">
+                    <form id="task-form">
+                        <div class="form-group">
+                            <label for="title">Title *</label>
+                            <input type="text" id="title" name="title" required placeholder="e.g., Fix login bug">
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="due_date">Due Date</label>
+                                <input type="date" id="due_date" name="due_date">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="estimated_hours">Estimated Hours</label>
+                                <input type="number" id="estimated_hours" name="estimated_hours" min="0" step="0.5" placeholder="8">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="importance">Importance (1-10)</label>
+                                <input type="number" id="importance" name="importance" min="1" max="10" value="5">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="dependencies">Dependencies (comma-separated task IDs)</label>
+                            <input type="text" id="dependencies" name="dependencies" placeholder="e.g., 1, 3, 5">
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">Add Task</button>
+                    </form>
+                    
+                    <div class="task-list-preview">
+                        <h3>Current Tasks (<span id="task-count">0</span>)</h3>
+                        <div id="task-preview-list"></div>
+                        <button class="btn btn-secondary" onclick="clearTasks()">Clear All</button>
+                    </div>
+                </div>
+
+                <!-- JSON Input Mode -->
+                <div id="json-input" class="input-mode" style="display: none;">
+                    <label for="json-textarea">Paste JSON Array of Tasks:</label>
+                    <textarea id="json-textarea" rows="12" placeholder='[
+  {
+    "title": "Fix login bug",
+    "due_date": "2025-11-30",
+    "estimated_hours": 3,
+    "importance": 8,
+    "dependencies": []
+  },
+  {
+    "title": "Write documentation",
+    "due_date": "2025-12-15",
+    "estimated_hours": 5,
+    "importance": 6,
+    "dependencies": [1]
+  }
+]'></textarea>
+                    <button class="btn btn-primary" onclick="loadTasksFromJSON()">Load Tasks</button>
+                </div>
+
+                <!-- Analyze Button -->
+                <div class="analyze-section">
+                    <button id="analyze-btn" class="btn btn-large" onclick="analyzeTasks()">
+                        <span id="analyze-text">Analyze Tasks</span>
+                        <span id="analyze-spinner" class="spinner" style="display: none;">⏳</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Output Section -->
+            <section class="output-section">
+                <h2>Prioritized Results</h2>
+                <div id="results-container">
+                    <div class="empty-state">
+                        <p>👆 Add tasks and click "Analyze Tasks" to see prioritized results</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Error/Success Messages -->
+        <div id="message-container"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
