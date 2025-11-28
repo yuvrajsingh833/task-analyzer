@@ -4,15 +4,21 @@ API Views for Smart Task Analyzer
 Endpoints:
 - POST /api/tasks/analyze/ - Analyze and sort tasks by priority
 - GET /api/tasks/suggest/ - Get top 3 recommended tasks
+- GET /api/tasks/ - List all tasks from database
+- POST /api/tasks/ - Create a new task in database
+- GET /api/tasks/{id}/ - Get a specific task
+- DELETE /api/tasks/{id}/ - Delete a task
 """
 
-from django.http import JsonResponse, FileResponse
+from django.http import JsonResponse, FileResponse, Http404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.conf import settings
+from django.forms.models import model_to_dict
 import json
 import os
 from .scoring import analyze_tasks, get_top_tasks, detect_circular_dependencies
+from .models import Task
 
 
 @csrf_exempt
@@ -131,15 +137,95 @@ def suggest_tasks_view(request):
         }, status=500)
 
 
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+def task_list_view(request):
+    """
+    GET /api/tasks/ - List all tasks from database
+    POST /api/tasks/ - Create a new task in database
+    
+    POST body:
+    {
+        "title": "Task title",
+        "due_date": "2025-11-30",
+        "estimated_hours": 3,
+        "importance": 8,
+        "dependencies": [1, 2]  // list of task IDs
+    }
+    """
+    if request.method == 'GET':
+        tasks = Task.objects.all()
+        tasks_data = [task.to_dict() for task in tasks]
+        return JsonResponse({
+            'tasks': tasks_data,
+            'count': len(tasks_data)
+        }, status=200)
+    
+    elif request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+            
+            # Create task
+            task = Task.objects.create(
+                title=body.get('title'),
+                due_date=body.get('due_date') if body.get('due_date') else None,
+                estimated_hours=body.get('estimated_hours') if body.get('estimated_hours') is not None else None,
+                importance=body.get('importance', 5)
+            )
+            
+            # Set dependencies if provided
+            dependencies = body.get('dependencies', [])
+            if dependencies:
+                task.dependencies.set(dependencies)
+            
+            return JsonResponse({
+                'task': task.to_dict(),
+                'message': 'Task created successfully'
+            }, status=201)
+        
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'error': 'Invalid JSON in request body'
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                'error': f'Error creating task: {str(e)}'
+            }, status=400)
+
+
+@csrf_exempt
+@require_http_methods(["GET", "DELETE"])
+def task_detail_view(request, task_id):
+    """
+    GET /api/tasks/{id}/ - Get a specific task
+    DELETE /api/tasks/{id}/ - Delete a task
+    """
+    try:
+        task = Task.objects.get(pk=task_id)
+    except Task.DoesNotExist:
+        return JsonResponse({
+            'error': 'Task not found'
+        }, status=404)
+    
+    if request.method == 'GET':
+        return JsonResponse({
+            'task': task.to_dict()
+        }, status=200)
+    
+    elif request.method == 'DELETE':
+        task.delete()
+        return JsonResponse({
+            'message': 'Task deleted successfully'
+        }, status=200)
+
+
 def serve_static_file(request, filename):
     """Serve static files from frontend directory in development."""
     frontend_dir = settings.STATICFILES_DIRS[0] if settings.STATICFILES_DIRS else None
     if not frontend_dir:
-        from django.http import Http404
         raise Http404("Static files directory not configured")
     
     file_path = os.path.join(frontend_dir, filename)
     if os.path.exists(file_path):
         return FileResponse(open(file_path, 'rb'), content_type='text/css' if filename.endswith('.css') else 'application/javascript')
-    from django.http import Http404
     raise Http404(f"File not found: {filename}")
