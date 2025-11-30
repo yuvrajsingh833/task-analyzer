@@ -31,10 +31,14 @@ A mini-application that intelligently scores and prioritizes tasks based on mult
 
 ---
 
-### Visual Features**
+### Advanced Visual Features (Bonus Challenges Completed)**
 #### **✔ Eisenhower Matrix View**
-Tasks plotted in a 2×2 grid  
-(Important vs Urgent)
+Tasks displayed in a 2×2 quadrant grid:
+
+Do First
+Schedule
+Delegate
+Eliminate
 
 #### ** Dependency Graph Visualization**
 - Auto-generated SVG graph  
