@@ -306,19 +306,19 @@ function displayResults(analyzedTasks, strategy) {
                     <span class="feedback-label">Was this prioritization helpful?</span>
                     <div class="feedback-buttons">
                         <button class="feedback-btn helpful-btn" onclick="submitFeedback(${task.id}, '${escapeHtml(task.title)}', '${strategy}', ${task.priority_score}, true, ${JSON.stringify({
-                            due_date: task.due_date,
-                            estimated_hours: task.estimated_hours,
-                            importance: task.importance,
-                            dependencies: task.dependencies || []
-                        })}, event)">
+            due_date: task.due_date,
+            estimated_hours: task.estimated_hours,
+            importance: task.importance,
+            dependencies: task.dependencies || []
+        })}, event)">
                             ✓ Helpful
                         </button>
                         <button class="feedback-btn not-helpful-btn" onclick="submitFeedback(${task.id}, '${escapeHtml(task.title)}', '${strategy}', ${task.priority_score}, false, ${JSON.stringify({
-                            due_date: task.due_date,
-                            estimated_hours: task.estimated_hours,
-                            importance: task.importance,
-                            dependencies: task.dependencies || []
-                        })}, event)">
+            due_date: task.due_date,
+            estimated_hours: task.estimated_hours,
+            importance: task.importance,
+            dependencies: task.dependencies || []
+        })}, event)">
                             ✗ Not Helpful
                         </button>
                     </div>
@@ -719,20 +719,20 @@ async function submitFeedback(taskId, taskTitle, strategy, priorityScore, wasHel
                 task_attributes: taskAttributes
             })
         });
-        
+
         const data = await response.json();
-        
+
         if (!response.ok) {
             throw new Error(data.error || 'Failed to submit feedback');
         }
-        
+
         showMessage(
-            wasHelpful 
-                ? 'Thank you for your feedback! The system will learn from this.' 
+            wasHelpful
+                ? 'Thank you for your feedback! The system will learn from this.'
                 : 'Thank you for your feedback! We\'ll use this to improve prioritization.',
             'success'
         );
-        
+
         // Disable feedback buttons for this task
         if (event && event.target) {
             const buttons = event.target.closest('.feedback-section').querySelectorAll('.feedback-btn');
@@ -740,12 +740,12 @@ async function submitFeedback(taskId, taskTitle, strategy, priorityScore, wasHel
                 btn.disabled = true;
                 btn.style.opacity = '0.6';
             });
-            
+
             // Highlight the selected button
             event.target.style.background = wasHelpful ? '#50c878' : '#e74c3c';
             event.target.style.color = 'white';
         }
-        
+
     } catch (error) {
         showMessage(`Error submitting feedback: ${error.message}`, 'error');
         console.error('Feedback error:', error);
