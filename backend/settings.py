@@ -29,6 +29,7 @@ ALLOWED_HOSTS = [
     "task-analyzer-7sd6.onrender.com",
     "localhost",
     "127.0.0.1",
+    "task-analyzer-cxe7.vercel.app", 
 ]
 
 
@@ -42,12 +43,15 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'tasks',
-]
+    "corsheaders"]
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
+
+    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.common.CommonMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -58,7 +62,13 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:8000",
     "http://127.0.0.1:8000",
+    "https://task-analyzer-7sd6.onrender.com",
+    "https://task-analyzer-cxe7.vercel.app"
 ]
+
+
+CORS_ALLOW_ALL_HEADERS = True
+CORS_ALLOW_CREDENTIALS = True
 
 ROOT_URLCONF = 'backend.urls'
 

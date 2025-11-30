@@ -5,6 +5,7 @@ let tasks = [];
 let taskIdCounter = 1;
 let currentView = 'list';
 let analyzedTasks = [];
+const API_URL = "https://task-analyzer-7sd6.onrender.com/api";
 
 // Strategy descriptions
 const strategyDescriptions = {
@@ -186,8 +187,9 @@ async function analyzeTasks() {
     analyzeText.textContent = 'Analyzing...';
     analyzeSpinner.style.display = 'inline-block';
 
+
     try {
-        const response = await fetch('/api/tasks/analyze/', {
+        const response = await fetch(`${API_URL}/tasks/analyze/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -400,7 +402,7 @@ async function loadDependencyGraph() {
     if (tasks.length === 0) return;
 
     try {
-        const response = await fetch('/api/tasks/dependency-graph/', {
+        const response = await fetch(`${API_URL}/tasks/dependency-graph/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -705,7 +707,7 @@ function calculateUrgencyForMatrix(task) {
 // Submit feedback
 async function submitFeedback(taskId, taskTitle, strategy, priorityScore, wasHelpful, taskAttributes, event) {
     try {
-        const response = await fetch('/api/tasks/feedback/', {
+        const response = await fetch(`${API_URL}/tasks/feedback/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
