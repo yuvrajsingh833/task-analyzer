@@ -109,6 +109,52 @@ def calculate_urgency_score(due_date: Optional[date], today: date) -> float:
         return 15.0   # Far future
 
 
+def build_dependency_graph(tasks: List[Dict]) -> Dict:
+    """
+    Build dependency graph structure for visualization.
+    
+    Returns:
+        {
+            'nodes': [{'id': task_id, 'title': task_title, ...}],
+            'edges': [{'from': task_id, 'to': dep_id}],
+            'circular_nodes': set of task_ids in cycles
+        }
+    """
+    task_ids = {task.get('id', i): i for i, task in enumerate(tasks)}
+    nodes = []
+    edges = []
+    
+    # Build nodes
+    for i, task in enumerate(tasks):
+        task_id = task.get('id', i)
+        nodes.append({
+            'id': task_id,
+            'title': task.get('title', f'Task {task_id}'),
+            'label': f"{task_id}: {task.get('title', 'Untitled')[:20]}"
+        })
+    
+    # Build edges
+    for i, task in enumerate(tasks):
+        task_id = task.get('id', i)
+        deps = task.get('dependencies', [])
+        for dep in deps:
+            if dep in task_ids:
+                edges.append({
+                    'from': task_id,
+                    'to': dep
+                })
+    
+    # Detect circular dependencies
+    has_circular, cycle = detect_circular_dependencies(tasks)
+    circular_nodes = set(cycle) if has_circular else set()
+    
+    return {
+        'nodes': nodes,
+        'edges': edges,
+        'circular_nodes': list(circular_nodes)
+    }
+
+
 def detect_circular_dependencies(tasks: List[Dict]) -> Tuple[bool, List[str]]:
     """
     Detect circular dependencies in task list.

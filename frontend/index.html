@@ -112,10 +112,19 @@
             <!-- Output Section -->
             <section class="output-section">
                 <h2>Prioritized Results</h2>
+                <div class="view-toggle">
+                    <button class="view-btn active" id="list-view-btn" onclick="switchView('list')">List View</button>
+                    <button class="view-btn" id="matrix-view-btn" onclick="switchView('matrix')">Eisenhower Matrix</button>
+                    <button class="view-btn" id="graph-view-btn" onclick="switchView('graph')">Dependency Graph</button>
+                </div>
                 <div id="results-container">
                     <div class="empty-state">
                         <p>👆 Add tasks and click "Analyze Tasks" to see prioritized results</p>
                     </div>
+                </div>
+                <div id="dependency-graph-container" style="display: none;">
+                    <h3>Dependency Graph</h3>
+                    <div id="graph-visualization"></div>
                 </div>
             </section>
         </div>

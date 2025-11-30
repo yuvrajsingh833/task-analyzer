@@ -17,7 +17,7 @@ from django.conf import settings
 from django.forms.models import model_to_dict
 import json
 import os
-from .scoring import analyze_tasks, get_top_tasks, detect_circular_dependencies
+from .scoring import analyze_tasks, get_top_tasks, detect_circular_dependencies, build_dependency_graph
 from .models import Task
 
 
@@ -217,6 +217,47 @@ def task_detail_view(request, task_id):
         return JsonResponse({
             'message': 'Task deleted successfully'
         }, status=200)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def dependency_graph_view(request):
+    """
+    POST /api/tasks/dependency-graph/
+    
+    Returns dependency graph structure for visualization.
+    
+    Request body:
+    {
+        "tasks": [...]
+    }
+    """
+    try:
+        body = json.loads(request.body)
+        tasks = body.get('tasks', [])
+        
+        if not isinstance(tasks, list):
+            return JsonResponse({
+                'error': 'Tasks must be a list'
+            }, status=400)
+        
+        graph_data = build_dependency_graph(tasks)
+        has_circular, cycle = detect_circular_dependencies(tasks)
+        
+        return JsonResponse({
+            'graph': graph_data,
+            'has_circular': has_circular,
+            'cycle': cycle
+        }, status=200)
+    
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'error': 'Invalid JSON in request body'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'error': f'Server error: {str(e)}'
+        }, status=500)
 
 
 def serve_static_file(request, filename):
