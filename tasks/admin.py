@@ -35,6 +35,6 @@ class TaskAdmin(admin.ModelAdmin):
     def is_overdue(self, obj):
         """Display overdue status in admin list."""
         if obj.is_overdue:
-            return "⚠️ Overdue"
-        return "✓ On time"
+            return " Overdue"
+        return " On time"
     is_overdue.short_description = "Status"
