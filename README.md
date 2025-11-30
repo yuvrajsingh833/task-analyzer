@@ -21,6 +21,58 @@ A mini-application that intelligently scores and prioritizes tasks based on mult
   - Missing or invalid data validation
   - Circular dependency detection
   - Graceful error handling
+ 
+  - Supports:
+- Missing fields  
+- Date parsing  
+- Overdue exponential penalty  
+- Dynamic weighting  
+- Circular dependency detection  
+
+---
+
+### **3. Visual Features**
+#### **✔ Eisenhower Matrix View**
+Tasks plotted in a 2×2 grid  
+(Important vs Urgent)
+
+#### ** Dependency Graph Visualization**
+- Auto-generated SVG graph  
+- Shows nodes + directional edges  
+- Red highlighting for circular dependencies  
+- Cycle path shown at top if detected  
+
+---
+
+### Learning System (Feedback API)**
+Users can mark results as:
+
+- **Helpful**  
+- **Not Helpful**
+
+Feedback is sent to the backend via:  
+`POST {API_URL}/api/tasks/feedback/`
+
+This system enables future improvements and adaptive scoring.
+
+---
+
+###  ** Unit Tests**
+Complete test suite added for:
+
+- Scoring logic  
+- Urgency/Importance calculation  
+- Dependency scoring  
+- Circular detection  
+- Strategy correctness  
+
+---
+
+### ✅ **6. API-Driven Architecture**
+Backend: **Django 5 + REST-style views**  
+Frontend: **HTML/CSS/JS (no frameworks)**
+
+
 
 - **Modern UI**: Clean, responsive interface with:
   - Form-based and JSON input modes
@@ -240,7 +292,7 @@ task-analyzer/
 
 ### API Endpoints
 
-#### POST `/api/tasks/analyze/`
+#### POST `{API_URL}/api/tasks/analyze/`
 
 Analyze and sort tasks by priority.
 
@@ -275,7 +327,7 @@ Analyze and sort tasks by priority.
 }
 ```
 
-#### GET `/api/tasks/suggest/`
+#### GET `{API_URL}/api/tasks/suggest/`
 
 Get top 3 recommended tasks.
 
@@ -334,15 +386,7 @@ Potential improvements (not implemented):
 - Custom strategy configuration
 - Export/import functionality
 
-## 📄 License
-
-This project is created for educational/demonstration purposes.
 
 ## 👤 Author
 
-Built as a demonstration of problem-solving, algorithmic thinking, and clean code practices.
-
----
-
-**Note**: This is a mini-application focused on demonstrating core skills. In a production environment, you would add authentication, database persistence, more robust error handling, logging, testing, etc.
-
+Created By Yuvraj Singh Rathore.aaaa
