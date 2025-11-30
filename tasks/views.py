@@ -40,6 +40,7 @@ def analyze_tasks_view(request):
         body = json.loads(request.body)
         tasks = body.get('tasks', [])
         strategy = body.get('strategy', 'smart_balance')
+        consider_weekends = body.get('consider_weekends', True)
         
         # Validate tasks is a list
         if not isinstance(tasks, list):
@@ -54,7 +55,7 @@ def analyze_tasks_view(request):
             warning = f"Warning: Circular dependency detected involving tasks: {cycle}"
         
         # Analyze tasks
-        analyzed_tasks = analyze_tasks(tasks, strategy)
+        analyzed_tasks = analyze_tasks(tasks, strategy, consider_weekends)
         
         response_data = {
             'tasks': analyzed_tasks,
@@ -123,7 +124,8 @@ def suggest_tasks_view(request):
             }, status=400)
         
         # Get top 3 tasks
-        top_tasks = get_top_tasks(tasks, strategy, top_n=3)
+        consider_weekends = body.get('consider_weekends', True) if request.method == 'POST' else True
+        top_tasks = get_top_tasks(tasks, strategy, top_n=3, consider_weekends=consider_weekends)
         
         return JsonResponse({
             'suggestions': top_tasks,

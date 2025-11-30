@@ -8,7 +8,7 @@ This module implements multiple scoring strategies for task prioritization:
 - Smart Balance: Balances all factors intelligently
 """
 
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from typing import Dict, List, Optional, Tuple
 import json
 
@@ -74,37 +74,107 @@ def parse_date(date_str: Optional[str]) -> Optional[date]:
     return None
 
 
-def calculate_urgency_score(due_date: Optional[date], today: date) -> float:
+def is_weekend(d: date) -> bool:
+    """Check if a date is a weekend (Saturday or Sunday)."""
+    return d.weekday() >= 5
+
+
+def is_holiday(d: date) -> bool:
     """
-    Calculate urgency score based on due date.
+    Check if a date is a common holiday.
+    
+    Currently supports US holidays. In production, this could be
+    configurable or use a holiday library.
+    """
+    # Common US holidays (simplified - doesn't account for variable dates like Thanksgiving)
+    holidays = [
+        (1, 1),   # New Year's Day
+        (7, 4),   # Independence Day
+        (12, 25), # Christmas
+        (12, 31), # New Year's Eve
+    ]
+    
+    return (d.month, d.day) in holidays
+
+
+def count_working_days(start_date: date, end_date: date) -> int:
+    """
+    Count working days (excluding weekends and holidays) between two dates.
+    
+    Args:
+        start_date: Start date (inclusive)
+        end_date: End date (inclusive)
+    
+    Returns:
+        Number of working days
+    """
+    if start_date > end_date:
+        return 0
+    
+    current = start_date
+    working_days = 0
+    
+    while current <= end_date:
+        if not is_weekend(current) and not is_holiday(current):
+            working_days += 1
+        current += timedelta(days=1)
+    
+    return working_days
+
+
+def calculate_urgency_score(due_date: Optional[date], today: date, consider_weekends: bool = True) -> float:
+    """
+    Calculate urgency score based on due date, considering weekends and holidays.
     
     - Past due dates get high urgency (exponential penalty)
     - Near-term dates get high urgency
     - Far future dates get low urgency
+    - If consider_weekends is True, only counts working days
     
     Returns a score between 0 and 100.
     """
     if not due_date:
         return 30.0  # No due date = moderate urgency
     
-    days_diff = (due_date - today).days
+    if consider_weekends:
+        # Count working days instead of calendar days
+        working_days_diff = count_working_days(today, due_date)
+        calendar_days_diff = (due_date - today).days
+    else:
+        working_days_diff = (due_date - today).days
+        calendar_days_diff = working_days_diff
+    
+    # Use working days for urgency calculation, but keep calendar days for overdue
+    days_diff = calendar_days_diff
     
     if days_diff < 0:
-        # Past due: exponential penalty
+        # Past due: exponential penalty (use calendar days for overdue)
         # 1 day overdue = 100, 7 days = ~150, 30 days = ~200
         return min(200.0, 100.0 + abs(days_diff) * 2.5)
     elif days_diff == 0:
-        return 100.0  # Due today
-    elif days_diff <= 1:
-        return 90.0   # Due tomorrow
-    elif days_diff <= 3:
-        return 75.0   # Due in 2-3 days
-    elif days_diff <= 7:
-        return 60.0   # Due in a week
-    elif days_diff <= 14:
-        return 45.0   # Due in 2 weeks
-    elif days_diff <= 30:
-        return 30.0   # Due in a month
+        # Due today - check if it's a working day
+        if consider_weekends and (is_weekend(today) or is_holiday(today)):
+            # Due on weekend/holiday - slightly less urgent but still high
+            return 95.0
+        return 100.0  # Due today (working day)
+    elif working_days_diff <= 0:
+        # Due within 0 working days (today is weekend/holiday, due date is next working day)
+        return 95.0
+    elif working_days_diff <= 1:
+        # Due in 1 working day
+        return 90.0
+    elif working_days_diff <= 3:
+        # Due in 2-3 working days
+        return 75.0
+    elif working_days_diff <= 5:
+        # Due in a week (5 working days)
+        return 60.0
+    elif working_days_diff <= 10:
+        # Due in 2 weeks (10 working days)
+        return 45.0
+    elif working_days_diff <= 20:
+        # Due in a month (approximately 20 working days)
+        return 30.0
     else:
         return 15.0   # Far future
 
@@ -216,7 +286,7 @@ def count_blocked_tasks(task_id: str, tasks: List[Dict]) -> int:
     return count
 
 
-def score_task_fastest_wins(task: Dict, tasks: List[Dict], today: date) -> Tuple[float, str]:
+def score_task_fastest_wins(task: Dict, tasks: List[Dict], today: date, consider_weekends: bool = True) -> Tuple[float, str]:
     """
     Strategy: Prioritize low-effort tasks for quick wins.
     
@@ -233,7 +303,7 @@ def score_task_fastest_wins(task: Dict, tasks: List[Dict], today: date) -> Tuple
     effort_score = max(10.0, 100.0 / (estimated_hours + 1))
     
     # Urgency still matters but less
-    urgency_score = calculate_urgency_score(due_date, today) * 0.3
+    urgency_score = calculate_urgency_score(due_date, today, consider_weekends) * 0.3
     
     # Importance matters but less
     importance_score = importance * 5.0
@@ -251,7 +321,7 @@ def score_task_fastest_wins(task: Dict, tasks: List[Dict], today: date) -> Tuple
     return total_score, explanation
 
 
-def score_task_high_impact(task: Dict, tasks: List[Dict], today: date) -> Tuple[float, str]:
+def score_task_high_impact(task: Dict, tasks: List[Dict], today: date, consider_weekends: bool = True) -> Tuple[float, str]:
     """
     Strategy: Prioritize importance over everything else.
     
@@ -272,7 +342,7 @@ def score_task_high_impact(task: Dict, tasks: List[Dict], today: date) -> Tuple[
     dependency_boost = blocked_count * 15.0
     
     # Urgency matters but less
-    urgency_score = calculate_urgency_score(due_date, today) * 0.4
+    urgency_score = calculate_urgency_score(due_date, today, consider_weekends) * 0.4
     
     total_score = importance_score + dependency_boost + urgency_score
     
@@ -287,7 +357,7 @@ def score_task_high_impact(task: Dict, tasks: List[Dict], today: date) -> Tuple[
     return total_score, explanation
 
 
-def score_task_deadline_driven(task: Dict, tasks: List[Dict], today: date) -> Tuple[float, str]:
+def score_task_deadline_driven(task: Dict, tasks: List[Dict], today: date, consider_weekends: bool = True) -> Tuple[float, str]:
     """
     Strategy: Prioritize based on due date urgency.
     
@@ -300,7 +370,7 @@ def score_task_deadline_driven(task: Dict, tasks: List[Dict], today: date) -> Tu
     importance = task.get('importance', 5)
     
     # Urgency is the main factor
-    urgency_score = calculate_urgency_score(due_date, today) * 2.0
+    urgency_score = calculate_urgency_score(due_date, today, consider_weekends) * 2.0
     
     # Importance is secondary
     importance_score = importance * 3.0
@@ -327,7 +397,7 @@ def score_task_deadline_driven(task: Dict, tasks: List[Dict], today: date) -> Tu
     return total_score, explanation
 
 
-def score_task_smart_balance(task: Dict, tasks: List[Dict], today: date) -> Tuple[float, str]:
+def score_task_smart_balance(task: Dict, tasks: List[Dict], today: date, consider_weekends: bool = True) -> Tuple[float, str]:
     """
     Strategy: Intelligently balance all factors.
     
@@ -345,7 +415,7 @@ def score_task_smart_balance(task: Dict, tasks: List[Dict], today: date) -> Tupl
     task_id = task.get('id', tasks.index(task) if task in tasks else 0)
     
     # Calculate base components
-    urgency_score = calculate_urgency_score(due_date, today)
+    urgency_score = calculate_urgency_score(due_date, today, consider_weekends)
     importance_score = importance * 10.0
     
     # Effort: inverted (lower = better), but not as dominant as "Fastest Wins"
@@ -399,7 +469,7 @@ def score_task_smart_balance(task: Dict, tasks: List[Dict], today: date) -> Tupl
     return total_score, explanation
 
 
-def score_task(task: Dict, tasks: List[Dict], strategy: str = 'smart_balance', today: Optional[date] = None) -> Tuple[float, str]:
+def score_task(task: Dict, tasks: List[Dict], strategy: str = 'smart_balance', today: Optional[date] = None, consider_weekends: bool = True) -> Tuple[float, str]:
     """
     Main scoring function that routes to the appropriate strategy.
     
@@ -408,6 +478,7 @@ def score_task(task: Dict, tasks: List[Dict], strategy: str = 'smart_balance', t
         tasks: List of all tasks (for dependency analysis)
         strategy: One of 'fastest_wins', 'high_impact', 'deadline_driven', 'smart_balance'
         today: Current date (defaults to today)
+        consider_weekends: Whether to consider weekends/holidays in urgency calculation
     
     Returns:
         Tuple of (score, explanation)
@@ -431,16 +502,17 @@ def score_task(task: Dict, tasks: List[Dict], strategy: str = 'smart_balance', t
     if strategy not in strategy_map:
         strategy = 'smart_balance'  # Default
     
-    return strategy_map[strategy](task, tasks, today)
+    return strategy_map[strategy](task, tasks, today, consider_weekends)
 
 
-def analyze_tasks(tasks: List[Dict], strategy: str = 'smart_balance') -> List[Dict]:
+def analyze_tasks(tasks: List[Dict], strategy: str = 'smart_balance', consider_weekends: bool = True) -> List[Dict]:
     """
     Analyze and sort tasks by priority score.
     
     Args:
         tasks: List of task dictionaries
         strategy: Scoring strategy to use
+        consider_weekends: Whether to consider weekends/holidays in urgency calculation
     
     Returns:
         List of tasks with added 'priority_score' and 'explanation' fields, sorted by score (descending)
@@ -462,7 +534,7 @@ def analyze_tasks(tasks: List[Dict], strategy: str = 'smart_balance') -> List[Di
     # Score all tasks
     scored_tasks = []
     for task in tasks:
-        score, explanation = score_task(task, tasks, strategy, today)
+        score, explanation = score_task(task, tasks, strategy, today, consider_weekends)
         task_copy = task.copy()
         task_copy['priority_score'] = round(score, 2)
         task_copy['explanation'] = explanation
@@ -480,7 +552,7 @@ def analyze_tasks(tasks: List[Dict], strategy: str = 'smart_balance') -> List[Di
     return scored_tasks
 
 
-def get_top_tasks(tasks: List[Dict], strategy: str = 'smart_balance', top_n: int = 3) -> List[Dict]:
+def get_top_tasks(tasks: List[Dict], strategy: str = 'smart_balance', top_n: int = 3, consider_weekends: bool = True) -> List[Dict]:
     """
     Get top N tasks with detailed explanations.
     
@@ -488,10 +560,11 @@ def get_top_tasks(tasks: List[Dict], strategy: str = 'smart_balance', top_n: int
         tasks: List of task dictionaries
         strategy: Scoring strategy to use
         top_n: Number of top tasks to return
+        consider_weekends: Whether to consider weekends/holidays in urgency calculation
     
     Returns:
         List of top N tasks with priority scores and explanations
     """
-    analyzed = analyze_tasks(tasks, strategy)
+    analyzed = analyze_tasks(tasks, strategy, consider_weekends)
     return analyzed[:top_n]
 

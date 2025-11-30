@@ -15,23 +15,23 @@ const strategyDescriptions = {
 };
 
 // Initialize
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // Strategy selector change handler
     const strategySelect = document.getElementById('strategy');
-    strategySelect.addEventListener('change', function() {
+    strategySelect.addEventListener('change', function () {
         updateStrategyDescription();
     });
-    
+
     // Form submit handler
     const taskForm = document.getElementById('task-form');
-    taskForm.addEventListener('submit', function(e) {
+    taskForm.addEventListener('submit', function (e) {
         e.preventDefault();
         addTaskFromForm();
     });
-    
+
     // Load sample tasks
     loadSampleTasks();
-    
+
     updateTaskPreview();
 });
 
@@ -41,7 +41,7 @@ function switchInputMode(mode) {
     const jsonInput = document.getElementById('json-input');
     const formBtn = document.getElementById('form-mode-btn');
     const jsonBtn = document.getElementById('json-mode-btn');
-    
+
     if (mode === 'form') {
         formInput.style.display = 'block';
         jsonInput.style.display = 'none';
@@ -66,24 +66,24 @@ function updateStrategyDescription() {
 function addTaskFromForm() {
     const form = document.getElementById('task-form');
     const formData = new FormData(form);
-    
+
     const task = {
         id: taskIdCounter++,
         title: formData.get('title'),
         due_date: formData.get('due_date') || null,
         estimated_hours: formData.get('estimated_hours') ? parseFloat(formData.get('estimated_hours')) : null,
         importance: formData.get('importance') ? parseInt(formData.get('importance')) : 5,
-        dependencies: formData.get('dependencies') 
+        dependencies: formData.get('dependencies')
             ? formData.get('dependencies').split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id))
             : []
     };
-    
+
     // Validate
     if (!task.title || task.title.trim() === '') {
         showMessage('Task title is required', 'error');
         return;
     }
-    
+
     tasks.push(task);
     form.reset();
     updateTaskPreview();
@@ -93,20 +93,20 @@ function addTaskFromForm() {
 // Load tasks from JSON
 function loadTasksFromJSON() {
     const jsonText = document.getElementById('json-textarea').value.trim();
-    
+
     if (!jsonText) {
         showMessage('Please enter JSON data', 'error');
         return;
     }
-    
+
     try {
         const parsedTasks = JSON.parse(jsonText);
-        
+
         if (!Array.isArray(parsedTasks)) {
             showMessage('JSON must be an array of tasks', 'error');
             return;
         }
-        
+
         // Assign IDs if missing
         parsedTasks.forEach((task, index) => {
             if (!task.id) {
@@ -115,11 +115,11 @@ function loadTasksFromJSON() {
                 taskIdCounter = Math.max(taskIdCounter, task.id + 1);
             }
         });
-        
+
         tasks = parsedTasks;
         updateTaskPreview();
         showMessage(`Loaded ${tasks.length} task(s)`, 'success');
-        
+
         // Switch to form mode to show preview
         switchInputMode('form');
     } catch (error) {
@@ -131,14 +131,14 @@ function loadTasksFromJSON() {
 function updateTaskPreview() {
     const previewList = document.getElementById('task-preview-list');
     const taskCount = document.getElementById('task-count');
-    
+
     taskCount.textContent = tasks.length;
-    
+
     if (tasks.length === 0) {
         previewList.innerHTML = '<p style="color: var(--text-secondary);">No tasks added yet</p>';
         return;
     }
-    
+
     previewList.innerHTML = tasks.map((task, index) => `
         <div class="task-preview-item">
             <div>
@@ -160,7 +160,7 @@ function removeTask(index) {
 // Clear all tasks
 function clearTasks() {
     if (tasks.length === 0) return;
-    
+
     if (confirm('Are you sure you want to clear all tasks?')) {
         tasks = [];
         taskIdCounter = 1;
@@ -175,17 +175,17 @@ async function analyzeTasks() {
         showMessage('Please add at least one task', 'error');
         return;
     }
-    
+
     const strategy = document.getElementById('strategy').value;
     const analyzeBtn = document.getElementById('analyze-btn');
     const analyzeText = document.getElementById('analyze-text');
     const analyzeSpinner = document.getElementById('analyze-spinner');
-    
+
     // Show loading state
     analyzeBtn.disabled = true;
     analyzeText.textContent = 'Analyzing...';
     analyzeSpinner.style.display = 'inline-block';
-    
+
     try {
         const response = await fetch('/api/tasks/analyze/', {
             method: 'POST',
@@ -197,26 +197,26 @@ async function analyzeTasks() {
                 strategy: strategy
             })
         });
-        
+
         const data = await response.json();
-        
+
         if (!response.ok) {
             throw new Error(data.error || 'Failed to analyze tasks');
         }
-        
+
         // Show warning if circular dependencies detected
         if (data.warning) {
             showMessage(data.warning, 'warning');
         }
-        
+
         analyzedTasks = data.tasks;
         displayResults(data.tasks, strategy);
-        
+
         // Load dependency graph
         await loadDependencyGraph();
-        
+
         showMessage(`Analyzed ${data.tasks.length} task(s)`, 'success');
-        
+
     } catch (error) {
         showMessage(`Error: ${error.message}`, 'error');
         console.error('Analysis error:', error);
@@ -231,24 +231,24 @@ async function analyzeTasks() {
 // Display results
 function displayResults(analyzedTasks, strategy) {
     const resultsContainer = document.getElementById('results-container');
-    
+
     if (analyzedTasks.length === 0) {
         resultsContainer.innerHTML = '<div class="empty-state"><p>No tasks to display</p></div>';
         return;
     }
-    
+
     // Respect current view
     if (currentView === 'matrix') {
         displayEisenhowerMatrix(analyzedTasks);
         return;
     }
-    
+
     // Calculate priority levels
     const scores = analyzedTasks.map(t => t.priority_score);
     const maxScore = Math.max(...scores);
     const minScore = Math.min(...scores);
     const range = maxScore - minScore;
-    
+
     const getPriorityLevel = (score) => {
         if (range === 0) return 'medium';
         const normalized = (score - minScore) / range;
@@ -256,11 +256,11 @@ function displayResults(analyzedTasks, strategy) {
         if (normalized >= 0.33) return 'medium';
         return 'low';
     };
-    
+
     resultsContainer.innerHTML = analyzedTasks.map((task, index) => {
         const priorityLevel = getPriorityLevel(task.priority_score);
         const priorityLabel = priorityLevel === 'high' ? 'High' : priorityLevel === 'medium' ? 'Medium' : 'Low';
-        
+
         return `
             <div class="task-card ${priorityLevel}-priority">
                 <div class="task-header">
@@ -312,9 +312,9 @@ function showMessage(message, type = 'success') {
     const messageEl = document.createElement('div');
     messageEl.className = `message ${type}`;
     messageEl.textContent = message;
-    
+
     container.appendChild(messageEl);
-    
+
     // Auto-remove after 5 seconds
     setTimeout(() => {
         messageEl.style.animation = 'slideIn 0.3s ease-out reverse';
@@ -336,10 +336,10 @@ function escapeHtml(text) {
 function formatDate(dateString) {
     if (!dateString) return 'No date';
     const date = new Date(dateString + 'T00:00:00');
-    return date.toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
     });
 }
 
@@ -351,12 +351,12 @@ function switchView(view) {
     const graphBtn = document.getElementById('graph-view-btn');
     const resultsContainer = document.getElementById('results-container');
     const graphContainer = document.getElementById('dependency-graph-container');
-    
+
     // Update button states
     listBtn.classList.remove('active');
     matrixBtn.classList.remove('active');
     graphBtn.classList.remove('active');
-    
+
     if (view === 'list') {
         listBtn.classList.add('active');
         resultsContainer.style.display = 'block';
@@ -376,7 +376,7 @@ function switchView(view) {
 // Load and display dependency graph
 async function loadDependencyGraph() {
     if (tasks.length === 0) return;
-    
+
     try {
         const response = await fetch('/api/tasks/dependency-graph/', {
             method: 'POST',
@@ -387,13 +387,13 @@ async function loadDependencyGraph() {
                 tasks: tasks
             })
         });
-        
+
         const data = await response.json();
-        
+
         if (!response.ok) {
             throw new Error(data.error || 'Failed to load dependency graph');
         }
-        
+
         renderDependencyGraph(data.graph, data.has_circular, data.cycle);
     } catch (error) {
         console.error('Error loading dependency graph:', error);
@@ -403,12 +403,12 @@ async function loadDependencyGraph() {
 // Render dependency graph visualization
 function renderDependencyGraph(graphData, hasCircular, cycle) {
     const container = document.getElementById('graph-visualization');
-    
+
     if (!graphData || graphData.nodes.length === 0) {
         container.innerHTML = '<p style="color: var(--text-secondary);">No dependencies to visualize</p>';
         return;
     }
-    
+
     // Create SVG
     const width = 800;
     const height = Math.max(400, graphData.nodes.length * 80);
@@ -418,13 +418,13 @@ function renderDependencyGraph(graphData, hasCircular, cycle) {
     svg.style.border = '1px solid var(--border-color)';
     svg.style.borderRadius = '8px';
     svg.style.background = 'white';
-    
+
     // Layout nodes in a hierarchical structure
     const nodePositions = {};
     const nodeRadius = 30;
     const horizontalSpacing = 200;
     const verticalSpacing = 100;
-    
+
     // Simple layout: arrange nodes in rows
     const nodesPerRow = Math.ceil(Math.sqrt(graphData.nodes.length));
     graphData.nodes.forEach((node, index) => {
@@ -434,24 +434,24 @@ function renderDependencyGraph(graphData, hasCircular, cycle) {
         const y = 80 + row * verticalSpacing;
         nodePositions[node.id] = { x, y };
     });
-    
+
     // Draw edges first (so they appear behind nodes)
     graphData.edges.forEach(edge => {
         const from = nodePositions[edge.from];
         const to = nodePositions[edge.to];
-        
+
         if (from && to) {
             const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
             line.setAttribute('x1', from.x);
             line.setAttribute('y1', from.y);
             line.setAttribute('x2', to.x);
             line.setAttribute('y2', to.y);
-            
+
             // Check if this edge is part of a cycle
-            const isCircular = hasCircular && 
-                graphData.circular_nodes.includes(edge.from) && 
+            const isCircular = hasCircular &&
+                graphData.circular_nodes.includes(edge.from) &&
                 graphData.circular_nodes.includes(edge.to);
-            
+
             line.setAttribute('stroke', isCircular ? '#e74c3c' : '#4a90e2');
             line.setAttribute('stroke-width', isCircular ? '3' : '2');
             line.setAttribute('marker-end', 'url(#arrowhead');
@@ -461,7 +461,7 @@ function renderDependencyGraph(graphData, hasCircular, cycle) {
             svg.appendChild(line);
         }
     });
-    
+
     // Add arrow marker
     const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
     const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
@@ -477,14 +477,14 @@ function renderDependencyGraph(graphData, hasCircular, cycle) {
     marker.appendChild(polygon);
     defs.appendChild(marker);
     svg.appendChild(defs);
-    
+
     // Draw nodes
     graphData.nodes.forEach(node => {
         const pos = nodePositions[node.id];
         if (!pos) return;
-        
+
         const isCircular = graphData.circular_nodes.includes(node.id);
-        
+
         // Draw circle
         const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         circle.setAttribute('cx', pos.x);
@@ -494,7 +494,7 @@ function renderDependencyGraph(graphData, hasCircular, cycle) {
         circle.setAttribute('stroke', isCircular ? '#e74c3c' : '#4a90e2');
         circle.setAttribute('stroke-width', isCircular ? '3' : '2');
         svg.appendChild(circle);
-        
+
         // Draw text
         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         text.setAttribute('x', pos.x);
@@ -505,7 +505,7 @@ function renderDependencyGraph(graphData, hasCircular, cycle) {
         text.setAttribute('fill', '#2c3e50');
         text.textContent = node.id;
         svg.appendChild(text);
-        
+
         // Draw title below
         const title = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         title.setAttribute('x', pos.x);
@@ -516,7 +516,7 @@ function renderDependencyGraph(graphData, hasCircular, cycle) {
         title.textContent = node.title.length > 15 ? node.title.substring(0, 15) + '...' : node.title;
         svg.appendChild(title);
     });
-    
+
     // Add warning if circular dependencies exist
     if (hasCircular) {
         const warning = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -529,7 +529,7 @@ function renderDependencyGraph(graphData, hasCircular, cycle) {
         warning.textContent = `⚠ Circular Dependencies Detected: Tasks ${cycle.join(', ')}`;
         svg.appendChild(warning);
     }
-    
+
     container.innerHTML = '';
     container.appendChild(svg);
 }
@@ -537,19 +537,19 @@ function renderDependencyGraph(graphData, hasCircular, cycle) {
 // Display Eisenhower Matrix (placeholder for now)
 function displayEisenhowerMatrix(tasks) {
     const resultsContainer = document.getElementById('results-container');
-    
+
     if (tasks.length === 0) {
         resultsContainer.innerHTML = '<div class="empty-state"><p>No tasks to display</p></div>';
         return;
     }
-    
+
     // Calculate urgency and importance for each task
     const matrixTasks = tasks.map(task => {
         const urgency = calculateUrgencyForMatrix(task);
         const importance = task.importance || 5;
         return { ...task, urgency, importance };
     });
-    
+
     // Categorize into quadrants
     const quadrants = {
         'urgent-important': matrixTasks.filter(t => t.urgency >= 7 && t.importance >= 7),
@@ -557,7 +557,7 @@ function displayEisenhowerMatrix(tasks) {
         'urgent-not-important': matrixTasks.filter(t => t.urgency >= 7 && t.importance < 7),
         'not-urgent-not-important': matrixTasks.filter(t => t.urgency < 7 && t.importance < 7)
     };
-    
+
     resultsContainer.innerHTML = `
         <div class="eisenhower-matrix">
             <div class="matrix-grid">
@@ -613,12 +613,12 @@ function displayEisenhowerMatrix(tasks) {
 // Calculate urgency score for matrix (0-10 scale)
 function calculateUrgencyForMatrix(task) {
     if (!task.due_date) return 3; // No due date = low urgency
-    
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const dueDate = new Date(task.due_date + 'T00:00:00');
     const daysDiff = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
-    
+
     if (daysDiff < 0) return 10; // Overdue
     if (daysDiff === 0) return 10; // Due today
     if (daysDiff <= 1) return 9;
@@ -660,12 +660,12 @@ function loadSampleTasks() {
             "dependencies": []
         }
     ];
-    
+
     // Assign IDs
     sampleTasks.forEach((task, index) => {
         task.id = index + 1;
     });
-    
+
     tasks = sampleTasks;
     taskIdCounter = sampleTasks.length + 1;
     updateTaskPreview();
