@@ -385,6 +385,7 @@ function switchView(view) {
         listBtn.classList.add('active');
         resultsContainer.style.display = 'block';
         graphContainer.style.display = 'none';
+        displayResults(analyzedTasks);
     } else if (view === 'matrix') {
         matrixBtn.classList.add('active');
         resultsContainer.style.display = 'block';
