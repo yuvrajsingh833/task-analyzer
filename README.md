@@ -31,7 +31,7 @@ A mini-application that intelligently scores and prioritizes tasks based on mult
 
 ---
 
-### Advanced Visual Features (Bonus Challenges Completed)**
+### Advanced Visual Features (Bonus Challenges Completed)
 #### **✔ Eisenhower Matrix View**
 Tasks displayed in a 2×2 quadrant grid:
 
@@ -40,7 +40,7 @@ Schedule
 Delegate
 Eliminate
 
-#### ** Dependency Graph Visualization**
+#### Dependency Graph Visualization
 - Auto-generated SVG graph  
 - Shows nodes + directional edges  
 - Red highlighting for circular dependencies  
