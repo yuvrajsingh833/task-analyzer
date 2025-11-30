@@ -534,73 +534,125 @@ function renderDependencyGraph(graphData, hasCircular, cycle) {
     container.appendChild(svg);
 }
 
-// Display Eisenhower Matrix (placeholder for now)
+// Display Eisenhower Matrix
 function displayEisenhowerMatrix(tasks) {
     const resultsContainer = document.getElementById('results-container');
-
+    
     if (tasks.length === 0) {
         resultsContainer.innerHTML = '<div class="empty-state"><p>No tasks to display</p></div>';
         return;
     }
-
+    
     // Calculate urgency and importance for each task
+    // Urgency: normalize priority_score to 0-10 scale, or use due date urgency
+    // Importance: use task.importance (1-10)
+    const maxScore = Math.max(...tasks.map(t => t.priority_score || 0));
+    const minScore = Math.min(...tasks.map(t => t.priority_score || 0));
+    const scoreRange = maxScore - minScore || 1;
+    
     const matrixTasks = tasks.map(task => {
-        const urgency = calculateUrgencyForMatrix(task);
+        // Calculate urgency from due date (0-10 scale)
+        let urgency = calculateUrgencyForMatrix(task);
+        
+        // Also consider priority score as a factor
+        const normalizedScore = scoreRange > 0 ? ((task.priority_score - minScore) / scoreRange) * 10 : 5;
+        urgency = (urgency * 0.7 + normalizedScore * 0.3); // Blend both
+        
         const importance = task.importance || 5;
         return { ...task, urgency, importance };
     });
-
+    
+    // Calculate thresholds (median values)
+    const urgencies = matrixTasks.map(t => t.urgency);
+    const importances = matrixTasks.map(t => t.importance);
+    const urgencyThreshold = urgencies.length > 0 ? 
+        urgencies.sort((a, b) => a - b)[Math.floor(urgencies.length / 2)] : 5;
+    const importanceThreshold = importances.length > 0 ?
+        importances.sort((a, b) => a - b)[Math.floor(importances.length / 2)] : 5;
+    
     // Categorize into quadrants
     const quadrants = {
-        'urgent-important': matrixTasks.filter(t => t.urgency >= 7 && t.importance >= 7),
-        'not-urgent-important': matrixTasks.filter(t => t.urgency < 7 && t.importance >= 7),
-        'urgent-not-important': matrixTasks.filter(t => t.urgency >= 7 && t.importance < 7),
-        'not-urgent-not-important': matrixTasks.filter(t => t.urgency < 7 && t.importance < 7)
+        'urgent-important': matrixTasks.filter(t => t.urgency >= urgencyThreshold && t.importance >= importanceThreshold),
+        'not-urgent-important': matrixTasks.filter(t => t.urgency < urgencyThreshold && t.importance >= importanceThreshold),
+        'urgent-not-important': matrixTasks.filter(t => t.urgency >= urgencyThreshold && t.importance < importanceThreshold),
+        'not-urgent-not-important': matrixTasks.filter(t => t.urgency < urgencyThreshold && t.importance < importanceThreshold)
     };
-
+    
     resultsContainer.innerHTML = `
         <div class="eisenhower-matrix">
+            <div class="matrix-header">
+                <div class="matrix-axis-label importance-label">Important</div>
+                <div class="matrix-axis-label urgency-label">Urgent</div>
+            </div>
             <div class="matrix-grid">
                 <div class="matrix-quadrant urgent-important">
-                    <h3>🔴 Urgent & Important</h3>
+                    <h3>🔴 Do First<br><small>Urgent & Important</small></h3>
+                    <div class="quadrant-count">${quadrants['urgent-important'].length} task(s)</div>
                     <div class="quadrant-tasks">
-                        ${quadrants['urgent-important'].map(task => `
+                        ${quadrants['urgent-important'].length === 0 ? 
+                            '<p class="empty-quadrant">No tasks</p>' :
+                            quadrants['urgent-important'].map(task => `
                             <div class="matrix-task-card">
                                 <strong>${escapeHtml(task.title)}</strong>
-                                <div class="matrix-scores">U: ${task.urgency.toFixed(1)} | I: ${task.importance}</div>
+                                <div class="matrix-scores">
+                                    <span>Urgency: ${task.urgency.toFixed(1)}/10</span>
+                                    <span>Importance: ${task.importance}/10</span>
+                                </div>
+                                ${task.due_date ? `<div class="matrix-due-date">Due: ${formatDate(task.due_date)}</div>` : ''}
                             </div>
                         `).join('')}
                     </div>
                 </div>
                 <div class="matrix-quadrant not-urgent-important">
-                    <h3>🟢 Not Urgent & Important</h3>
+                    <h3>🟢 Schedule<br><small>Not Urgent & Important</small></h3>
+                    <div class="quadrant-count">${quadrants['not-urgent-important'].length} task(s)</div>
                     <div class="quadrant-tasks">
-                        ${quadrants['not-urgent-important'].map(task => `
+                        ${quadrants['not-urgent-important'].length === 0 ? 
+                            '<p class="empty-quadrant">No tasks</p>' :
+                            quadrants['not-urgent-important'].map(task => `
                             <div class="matrix-task-card">
                                 <strong>${escapeHtml(task.title)}</strong>
-                                <div class="matrix-scores">U: ${task.urgency.toFixed(1)} | I: ${task.importance}</div>
+                                <div class="matrix-scores">
+                                    <span>Urgency: ${task.urgency.toFixed(1)}/10</span>
+                                    <span>Importance: ${task.importance}/10</span>
+                                </div>
+                                ${task.due_date ? `<div class="matrix-due-date">Due: ${formatDate(task.due_date)}</div>` : ''}
                             </div>
                         `).join('')}
                     </div>
                 </div>
                 <div class="matrix-quadrant urgent-not-important">
-                    <h3>🟡 Urgent & Not Important</h3>
+                    <h3>🟡 Delegate<br><small>Urgent & Not Important</small></h3>
+                    <div class="quadrant-count">${quadrants['urgent-not-important'].length} task(s)</div>
                     <div class="quadrant-tasks">
-                        ${quadrants['urgent-not-important'].map(task => `
+                        ${quadrants['urgent-not-important'].length === 0 ? 
+                            '<p class="empty-quadrant">No tasks</p>' :
+                            quadrants['urgent-not-important'].map(task => `
                             <div class="matrix-task-card">
                                 <strong>${escapeHtml(task.title)}</strong>
-                                <div class="matrix-scores">U: ${task.urgency.toFixed(1)} | I: ${task.importance}</div>
+                                <div class="matrix-scores">
+                                    <span>Urgency: ${task.urgency.toFixed(1)}/10</span>
+                                    <span>Importance: ${task.importance}/10</span>
+                                </div>
+                                ${task.due_date ? `<div class="matrix-due-date">Due: ${formatDate(task.due_date)}</div>` : ''}
                             </div>
                         `).join('')}
                     </div>
                 </div>
                 <div class="matrix-quadrant not-urgent-not-important">
-                    <h3>⚪ Not Urgent & Not Important</h3>
+                    <h3>⚪ Eliminate<br><small>Not Urgent & Not Important</small></h3>
+                    <div class="quadrant-count">${quadrants['not-urgent-not-important'].length} task(s)</div>
                     <div class="quadrant-tasks">
-                        ${quadrants['not-urgent-not-important'].map(task => `
+                        ${quadrants['not-urgent-not-important'].length === 0 ? 
+                            '<p class="empty-quadrant">No tasks</p>' :
+                            quadrants['not-urgent-not-important'].map(task => `
                             <div class="matrix-task-card">
                                 <strong>${escapeHtml(task.title)}</strong>
-                                <div class="matrix-scores">U: ${task.urgency.toFixed(1)} | I: ${task.importance}</div>
+                                <div class="matrix-scores">
+                                    <span>Urgency: ${task.urgency.toFixed(1)}/10</span>
+                                    <span>Importance: ${task.importance}/10</span>
+                                </div>
+                                ${task.due_date ? `<div class="matrix-due-date">Due: ${formatDate(task.due_date)}</div>` : ''}
                             </div>
                         `).join('')}
                     </div>
@@ -613,12 +665,12 @@ function displayEisenhowerMatrix(tasks) {
 // Calculate urgency score for matrix (0-10 scale)
 function calculateUrgencyForMatrix(task) {
     if (!task.due_date) return 3; // No due date = low urgency
-
+    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const dueDate = new Date(task.due_date + 'T00:00:00');
     const daysDiff = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
-
+    
     if (daysDiff < 0) return 10; // Overdue
     if (daysDiff === 0) return 10; // Due today
     if (daysDiff <= 1) return 9;
