@@ -31,7 +31,7 @@ A mini-application that intelligently scores and prioritizes tasks based on mult
 
 ---
 
-### **3. Visual Features**
+### Visual Features**
 #### **✔ Eisenhower Matrix View**
 Tasks plotted in a 2×2 grid  
 (Important vs Urgent)
@@ -57,7 +57,7 @@ This system enables future improvements and adaptive scoring.
 
 ---
 
-###  ** Unit Tests**
+###  Unit Tests
 Complete test suite added for:
 
 - Scoring logic  
@@ -68,7 +68,7 @@ Complete test suite added for:
 
 ---
 
-### ✅ **6. API-Driven Architecture**
+### API-Driven Architecture**
 Backend: **Django 5 + REST-style views**  
 Frontend: **HTML/CSS/JS (no frameworks)**
 
