@@ -19,6 +19,7 @@ import json
 import os
 from .scoring import analyze_tasks, get_top_tasks, detect_circular_dependencies, build_dependency_graph
 from .models import Task
+from .learning import record_feedback, get_feedback_stats, get_adjusted_weights
 
 
 @csrf_exempt
@@ -256,6 +257,96 @@ def dependency_graph_view(request):
         return JsonResponse({
             'error': 'Invalid JSON in request body'
         }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'error': f'Server error: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def submit_feedback_view(request):
+    """
+    POST /api/tasks/feedback/
+    
+    Submit user feedback on task prioritization.
+    
+    Request body:
+    {
+        "task_id": 1,
+        "task_title": "Task title",
+        "strategy": "smart_balance",
+        "priority_score": 125.5,
+        "was_helpful": true,
+        "task_attributes": {...},
+        "feedback_note": "Optional note"
+    }
+    """
+    try:
+        body = json.loads(request.body)
+        
+        task_id = body.get('task_id')
+        task_title = body.get('task_title', '')
+        strategy = body.get('strategy', 'smart_balance')
+        priority_score = body.get('priority_score', 0.0)
+        was_helpful = body.get('was_helpful', False)
+        task_attributes = body.get('task_attributes', {})
+        feedback_note = body.get('feedback_note')
+        
+        if task_id is None:
+            return JsonResponse({
+                'error': 'task_id is required'
+            }, status=400)
+        
+        feedback = record_feedback(
+            task_id=task_id,
+            task_title=task_title,
+            strategy=strategy,
+            priority_score=priority_score,
+            was_helpful=was_helpful,
+            task_attributes=task_attributes,
+            feedback_note=feedback_note
+        )
+        
+        # Get updated feedback stats
+        stats = get_feedback_stats(strategy)
+        
+        return JsonResponse({
+            'message': 'Feedback recorded successfully',
+            'feedback_id': feedback.id,
+            'stats': stats
+        }, status=201)
+    
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'error': 'Invalid JSON in request body'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'error': f'Server error: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def feedback_stats_view(request):
+    """
+    GET /api/tasks/feedback/stats/
+    
+    Get feedback statistics for a strategy.
+    
+    Query parameters:
+    - strategy: Scoring strategy (default: 'smart_balance')
+    """
+    try:
+        strategy = request.GET.get('strategy', 'smart_balance')
+        stats = get_feedback_stats(strategy)
+        
+        return JsonResponse({
+            'strategy': strategy,
+            'stats': stats
+        }, status=200)
+    
     except Exception as e:
         return JsonResponse({
             'error': f'Server error: {str(e)}'

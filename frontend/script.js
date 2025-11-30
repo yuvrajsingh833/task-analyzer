@@ -301,6 +301,28 @@ function displayResults(analyzedTasks, strategy) {
                 <div class="explanation">
                     <strong>Why this priority?</strong> ${escapeHtml(task.explanation || 'No explanation available')}
                 </div>
+                
+                <div class="feedback-section">
+                    <span class="feedback-label">Was this prioritization helpful?</span>
+                    <div class="feedback-buttons">
+                        <button class="feedback-btn helpful-btn" onclick="submitFeedback(${task.id}, '${escapeHtml(task.title)}', '${strategy}', ${task.priority_score}, true, ${JSON.stringify({
+                            due_date: task.due_date,
+                            estimated_hours: task.estimated_hours,
+                            importance: task.importance,
+                            dependencies: task.dependencies || []
+                        })}, event)">
+                            ✓ Helpful
+                        </button>
+                        <button class="feedback-btn not-helpful-btn" onclick="submitFeedback(${task.id}, '${escapeHtml(task.title)}', '${strategy}', ${task.priority_score}, false, ${JSON.stringify({
+                            due_date: task.due_date,
+                            estimated_hours: task.estimated_hours,
+                            importance: task.importance,
+                            dependencies: task.dependencies || []
+                        })}, event)">
+                            ✗ Not Helpful
+                        </button>
+                    </div>
+                </div>
             </div>
         `;
     }).join('');
@@ -537,39 +559,39 @@ function renderDependencyGraph(graphData, hasCircular, cycle) {
 // Display Eisenhower Matrix
 function displayEisenhowerMatrix(tasks) {
     const resultsContainer = document.getElementById('results-container');
-    
+
     if (tasks.length === 0) {
         resultsContainer.innerHTML = '<div class="empty-state"><p>No tasks to display</p></div>';
         return;
     }
-    
+
     // Calculate urgency and importance for each task
     // Urgency: normalize priority_score to 0-10 scale, or use due date urgency
     // Importance: use task.importance (1-10)
     const maxScore = Math.max(...tasks.map(t => t.priority_score || 0));
     const minScore = Math.min(...tasks.map(t => t.priority_score || 0));
     const scoreRange = maxScore - minScore || 1;
-    
+
     const matrixTasks = tasks.map(task => {
         // Calculate urgency from due date (0-10 scale)
         let urgency = calculateUrgencyForMatrix(task);
-        
+
         // Also consider priority score as a factor
         const normalizedScore = scoreRange > 0 ? ((task.priority_score - minScore) / scoreRange) * 10 : 5;
         urgency = (urgency * 0.7 + normalizedScore * 0.3); // Blend both
-        
+
         const importance = task.importance || 5;
         return { ...task, urgency, importance };
     });
-    
+
     // Calculate thresholds (median values)
     const urgencies = matrixTasks.map(t => t.urgency);
     const importances = matrixTasks.map(t => t.importance);
-    const urgencyThreshold = urgencies.length > 0 ? 
+    const urgencyThreshold = urgencies.length > 0 ?
         urgencies.sort((a, b) => a - b)[Math.floor(urgencies.length / 2)] : 5;
     const importanceThreshold = importances.length > 0 ?
         importances.sort((a, b) => a - b)[Math.floor(importances.length / 2)] : 5;
-    
+
     // Categorize into quadrants
     const quadrants = {
         'urgent-important': matrixTasks.filter(t => t.urgency >= urgencyThreshold && t.importance >= importanceThreshold),
@@ -577,7 +599,7 @@ function displayEisenhowerMatrix(tasks) {
         'urgent-not-important': matrixTasks.filter(t => t.urgency >= urgencyThreshold && t.importance < importanceThreshold),
         'not-urgent-not-important': matrixTasks.filter(t => t.urgency < urgencyThreshold && t.importance < importanceThreshold)
     };
-    
+
     resultsContainer.innerHTML = `
         <div class="eisenhower-matrix">
             <div class="matrix-header">
@@ -589,9 +611,9 @@ function displayEisenhowerMatrix(tasks) {
                     <h3>🔴 Do First<br><small>Urgent & Important</small></h3>
                     <div class="quadrant-count">${quadrants['urgent-important'].length} task(s)</div>
                     <div class="quadrant-tasks">
-                        ${quadrants['urgent-important'].length === 0 ? 
-                            '<p class="empty-quadrant">No tasks</p>' :
-                            quadrants['urgent-important'].map(task => `
+                        ${quadrants['urgent-important'].length === 0 ?
+            '<p class="empty-quadrant">No tasks</p>' :
+            quadrants['urgent-important'].map(task => `
                             <div class="matrix-task-card">
                                 <strong>${escapeHtml(task.title)}</strong>
                                 <div class="matrix-scores">
@@ -607,9 +629,9 @@ function displayEisenhowerMatrix(tasks) {
                     <h3>🟢 Schedule<br><small>Not Urgent & Important</small></h3>
                     <div class="quadrant-count">${quadrants['not-urgent-important'].length} task(s)</div>
                     <div class="quadrant-tasks">
-                        ${quadrants['not-urgent-important'].length === 0 ? 
-                            '<p class="empty-quadrant">No tasks</p>' :
-                            quadrants['not-urgent-important'].map(task => `
+                        ${quadrants['not-urgent-important'].length === 0 ?
+            '<p class="empty-quadrant">No tasks</p>' :
+            quadrants['not-urgent-important'].map(task => `
                             <div class="matrix-task-card">
                                 <strong>${escapeHtml(task.title)}</strong>
                                 <div class="matrix-scores">
@@ -625,9 +647,9 @@ function displayEisenhowerMatrix(tasks) {
                     <h3>🟡 Delegate<br><small>Urgent & Not Important</small></h3>
                     <div class="quadrant-count">${quadrants['urgent-not-important'].length} task(s)</div>
                     <div class="quadrant-tasks">
-                        ${quadrants['urgent-not-important'].length === 0 ? 
-                            '<p class="empty-quadrant">No tasks</p>' :
-                            quadrants['urgent-not-important'].map(task => `
+                        ${quadrants['urgent-not-important'].length === 0 ?
+            '<p class="empty-quadrant">No tasks</p>' :
+            quadrants['urgent-not-important'].map(task => `
                             <div class="matrix-task-card">
                                 <strong>${escapeHtml(task.title)}</strong>
                                 <div class="matrix-scores">
@@ -643,9 +665,9 @@ function displayEisenhowerMatrix(tasks) {
                     <h3>⚪ Eliminate<br><small>Not Urgent & Not Important</small></h3>
                     <div class="quadrant-count">${quadrants['not-urgent-not-important'].length} task(s)</div>
                     <div class="quadrant-tasks">
-                        ${quadrants['not-urgent-not-important'].length === 0 ? 
-                            '<p class="empty-quadrant">No tasks</p>' :
-                            quadrants['not-urgent-not-important'].map(task => `
+                        ${quadrants['not-urgent-not-important'].length === 0 ?
+            '<p class="empty-quadrant">No tasks</p>' :
+            quadrants['not-urgent-not-important'].map(task => `
                             <div class="matrix-task-card">
                                 <strong>${escapeHtml(task.title)}</strong>
                                 <div class="matrix-scores">
@@ -665,12 +687,12 @@ function displayEisenhowerMatrix(tasks) {
 // Calculate urgency score for matrix (0-10 scale)
 function calculateUrgencyForMatrix(task) {
     if (!task.due_date) return 3; // No due date = low urgency
-    
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const dueDate = new Date(task.due_date + 'T00:00:00');
     const daysDiff = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
-    
+
     if (daysDiff < 0) return 10; // Overdue
     if (daysDiff === 0) return 10; // Due today
     if (daysDiff <= 1) return 9;
@@ -678,6 +700,56 @@ function calculateUrgencyForMatrix(task) {
     if (daysDiff <= 7) return 6;
     if (daysDiff <= 14) return 4;
     return 2;
+}
+
+// Submit feedback
+async function submitFeedback(taskId, taskTitle, strategy, priorityScore, wasHelpful, taskAttributes, event) {
+    try {
+        const response = await fetch('/api/tasks/feedback/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                task_id: taskId,
+                task_title: taskTitle,
+                strategy: strategy,
+                priority_score: priorityScore,
+                was_helpful: wasHelpful,
+                task_attributes: taskAttributes
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to submit feedback');
+        }
+        
+        showMessage(
+            wasHelpful 
+                ? 'Thank you for your feedback! The system will learn from this.' 
+                : 'Thank you for your feedback! We\'ll use this to improve prioritization.',
+            'success'
+        );
+        
+        // Disable feedback buttons for this task
+        if (event && event.target) {
+            const buttons = event.target.closest('.feedback-section').querySelectorAll('.feedback-btn');
+            buttons.forEach(btn => {
+                btn.disabled = true;
+                btn.style.opacity = '0.6';
+            });
+            
+            // Highlight the selected button
+            event.target.style.background = wasHelpful ? '#50c878' : '#e74c3c';
+            event.target.style.color = 'white';
+        }
+        
+    } catch (error) {
+        showMessage(`Error submitting feedback: ${error.message}`, 'error');
+        console.error('Feedback error:', error);
+    }
 }
 
 // Load sample tasks

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Task
+from .models import Task, TaskFeedback
 
 
 @admin.register(Task)
@@ -38,3 +38,31 @@ class TaskAdmin(admin.ModelAdmin):
             return " Overdue"
         return " On time"
     is_overdue.short_description = "Status"
+
+
+@admin.register(TaskFeedback)
+class TaskFeedbackAdmin(admin.ModelAdmin):
+    """
+    Admin interface for TaskFeedback model.
+    """
+    list_display = ['task_title', 'strategy', 'priority_score', 'was_helpful', 'created_at']
+    list_filter = ['strategy', 'was_helpful', 'created_at']
+    search_fields = ['task_title', 'feedback_note']
+    readonly_fields = ['created_at']
+    
+    fieldsets = (
+        ('Task Information', {
+            'fields': ('task_id', 'task_title', 'strategy', 'priority_score')
+        }),
+        ('Feedback', {
+            'fields': ('was_helpful', 'feedback_note')
+        }),
+        ('Task Attributes', {
+            'fields': ('task_attributes',),
+            'classes': ('collapse',)
+        }),
+        ('Metadata', {
+            'fields': ('created_at',),
+            'classes': ('collapse',)
+        }),
+    )

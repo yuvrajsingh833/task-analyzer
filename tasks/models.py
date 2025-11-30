@@ -76,3 +76,31 @@ class Task(models.Model):
         if self.due_date:
             return (self.due_date - timezone.now().date()).days
         return None
+
+
+class TaskFeedback(models.Model):
+    """
+    Model for storing user feedback on task prioritization.
+    
+    This enables the learning system to adjust algorithm weights based on
+    whether users found the suggested priorities helpful.
+    """
+    task_id = models.IntegerField(help_text="ID of the task that was prioritized")
+    task_title = models.CharField(max_length=200, help_text="Title of the task")
+    strategy = models.CharField(max_length=50, help_text="Scoring strategy used")
+    priority_score = models.FloatField(help_text="Priority score assigned")
+    was_helpful = models.BooleanField(help_text="Whether the user found this prioritization helpful")
+    feedback_note = models.TextField(blank=True, null=True, help_text="Optional feedback note")
+    task_attributes = models.JSONField(
+        default=dict,
+        help_text="Task attributes at time of feedback (due_date, importance, etc.)"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Task Feedback"
+        verbose_name_plural = "Task Feedbacks"
+    
+    def __str__(self):
+        return f"Feedback for '{self.task_title}' - {'Helpful' if self.was_helpful else 'Not Helpful'}"
